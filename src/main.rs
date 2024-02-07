@@ -29,9 +29,13 @@ async fn perform_first_stage() -> Result<(), Box<dyn std::error::Error>> {
                 progress_bar_clone.lock().await.inc(1);
                 match next_ipv4_address {
                     Some(mut ipv4_address) => {
-                        let connection_attempt = tokio::net::TcpStream::connect(ipv4_address.clone() + ":80");
-                        let connection_result =
-                            tokio::time::timeout(tokio::time::Duration::new(1, 0), connection_attempt).await;
+                        let connection_attempt =
+                            tokio::net::TcpStream::connect(ipv4_address.clone() + ":80");
+                        let connection_result = tokio::time::timeout(
+                            tokio::time::Duration::new(1, 0),
+                            connection_attempt,
+                        )
+                        .await;
                         match connection_result {
                             Ok(result) => match result {
                                 Ok(mut connection) => {
@@ -69,7 +73,8 @@ async fn perform_second_stage() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let progress_bar = ProgressBar::new(live_ipv4_addresses.len() as u64);
     let mut tasks = Vec::new();
-    let live_ipv4_addresses_iter_lock = Arc::new(tokio::sync::Mutex::new(live_ipv4_addresses.into_iter()));
+    let live_ipv4_addresses_iter_lock =
+        Arc::new(tokio::sync::Mutex::new(live_ipv4_addresses.into_iter()));
     for _ in 1..10 {
         let addresses_iter_clone = live_ipv4_addresses_iter_lock.clone();
         let ping_result_file_clone = ping_result_file_lock.clone();
