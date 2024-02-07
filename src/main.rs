@@ -20,7 +20,7 @@ async fn first_stage() -> Result<(), Box<dyn std::error::Error>> {
         let result_fslock_t = result_fslock.clone();
         let a = tokio::spawn(async move {
             let _temp = tokio::net::TcpStream::connect(ipv4_t.clone() + ":80");
-            let _temp2 = tokio::time::timeout(tokio::time::Duration::new(5, 0), _temp).await;
+            let _temp2 = tokio::time::timeout(tokio::time::Duration::new(1, 0), _temp).await;
             match _temp2 {
                 Ok(v) => match v {
                     Ok(mut _vv) => {
@@ -34,7 +34,7 @@ async fn first_stage() -> Result<(), Box<dyn std::error::Error>> {
                 Err(_) => {}
             }
         });
-        if v.len() >= 3000 {
+        if v.len() >= 200 {
             let v_temp = mem::replace(&mut v, Vec::new());
             join_all(v_temp).await;
             v.clear();
