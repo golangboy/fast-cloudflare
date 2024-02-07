@@ -1,12 +1,12 @@
-use fastping_rs::PingResult::Receive;
-use fastping_rs::Pinger;
 use futures::future::join_all;
 use indicatif::ProgressBar;
-use std::mem;
 use std::sync::Arc;
+use std::{io::Write, mem};
+use surge_ping::{Client, Config, IcmpPacket, PingIdentifier, PingSequence};
 use tokio::io::AsyncWriteExt;
 mod utils;
-
+use rand::random;
+use std::time::Duration;
 async fn first_stage() -> Result<(), Box<dyn std::error::Error>> {
     let cf_ipv4 = utils::get_all_ipv4().await?;
     let mut v = Vec::new();
@@ -34,11 +34,10 @@ async fn first_stage() -> Result<(), Box<dyn std::error::Error>> {
                 Err(_) => {}
             }
         });
-        if v.len() >= 1000 {
+        if v.len() >= 3000 {
             let v_temp = mem::replace(&mut v, Vec::new());
             join_all(v_temp).await;
             v.clear();
-            break;
         } else {
             v.push(a);
         }
@@ -50,19 +49,47 @@ async fn first_stage() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn second_stage() -> Result<(), Box<dyn std::error::Error>> {
-    let (pinger, results) = match Pinger::new(None, Some(56)) {
-        Ok((pinger, results)) => (pinger, results),
-        Err(e) => panic!("Error creating pinger: {}", e),
-    };
-
     let tcp_result: String = std::fs::read_to_string("result/live_ip.txt").unwrap();
     let ping_result = std::fs::File::create("result/ping_ip.txt").unwrap();
+    let ping_result_lock = Arc::new(tokio::sync::Mutex::new(ping_result));
     let ipv4s: Vec<&str> = tcp_result.split("\n").filter(|&s| !s.is_empty()).collect();
     let pb = ProgressBar::new(ipv4s.len() as u64);
+    let mut wait_for_ping = Vec::new();
     for ipv4 in ipv4s {
-        
+        let mut ipv4_t = String::from(ipv4);
+        let ping_result_lock_t = ping_result_lock.clone();
+        let a = tokio::spawn(async move {
+            let client_v4 = Client::new(&Config::default()).unwrap();
+            let mut pinger = client_v4
+                .pinger(ipv4_t.parse().unwrap(), PingIdentifier(random()))
+                .await;
+            pinger.timeout(Duration::from_secs(1));
+            let payload = &[1u8];
+            match pinger.ping(PingSequence::from(1), payload).await {
+                Ok((IcmpPacket::V4(_packet), dur)) => {
+                    ipv4_t.push(' ');
+                    ipv4_t.push_str(&dur.as_millis().to_string());
+                    ipv4_t.push('\n');
+                    let mut t = ping_result_lock_t.lock().await;
+                    t.write(ipv4_t.as_bytes()).unwrap();
+                }
+                Ok((IcmpPacket::V6(_packet), _dur)) => {}
+                Err(_) => {
+                    ipv4_t.push_str(" timeout\n");
+                    let mut t = ping_result_lock_t.lock().await;
+                    t.write(ipv4_t.as_bytes()).unwrap();
+                }
+            }
+        });
+        wait_for_ping.push(a);
+        if wait_for_ping.len() > 10 {
+            let wait_for_ping_t = mem::replace(&mut wait_for_ping, Vec::new());
+            join_all(wait_for_ping_t).await;
+            wait_for_ping.clear();
+        }
         pb.inc(1);
     }
+    join_all(wait_for_ping).await;
     return Ok(());
 }
 
