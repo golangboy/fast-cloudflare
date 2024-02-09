@@ -4,17 +4,19 @@ use ipnetwork::Ipv4Network;
 use reqwest::header;
 
 pub async fn get_all_ipv4() -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let cidrs = get_cidr_from_cf().await?;
-    let _cidrs_arr = cidrs.split("\n");
-    let mut res = Vec::<String>::new();
-    for cidr in _cidrs_arr {
-        let temps: Ipv4Network = cidr.parse().unwrap();
-        for temp in temps.iter() {
-            res.push(String::from(temp.to_string()));
+    
+    let cidr_strings = get_cidr_from_cf().await?;
+    let cidr_list = cidr_strings.split("\n");
+    let mut ipv4_addresses = Vec::<String>::new();
+    for cidr in cidr_list {
+        let network: Ipv4Network = cidr.parse().unwrap();
+        for address in network.iter() {
+            ipv4_addresses.push(String::from(address.to_string()));
         }
     }
-    return Ok(res);
+    return Ok(ipv4_addresses);
 }
+
 
 pub async fn get_cidr_from_cf() -> Result<String, Box<dyn std::error::Error>> {
     let mut headers = header::HeaderMap::new();
