@@ -1,13 +1,12 @@
 use futures::future::join_all;
 use indicatif::ProgressBar;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::sync::Arc;
 use surge_ping::{Client, Config, IcmpPacket, PingIdentifier, PingSequence};
 use tokio::io::AsyncWriteExt;
 mod utils;
 use rand::random;
 use std::time::Duration;
-
 async fn perform_first_stage() -> Result<(), Box<dyn std::error::Error>> {
     let cloudflare_ipv4_addresses = utils::get_all_ipv4().await?;
     let mut tasks = Vec::new();
@@ -103,7 +102,7 @@ async fn perform_second_stage() -> Result<(), Box<dyn std::error::Error>> {
                             Ok((IcmpPacket::V6(_packet), _duration)) => {}
                             Err(_) => {
                                 let mut result_line = String::from(ipv4_address);
-                                result_line.push_str(" timeout\n");
+                                result_line.push_str(" 999999\n");
                                 let mut file_handle = ping_result_file_clone.lock().await;
                                 file_handle.write(result_line.as_bytes()).unwrap();
                             }
@@ -121,6 +120,31 @@ async fn perform_second_stage() -> Result<(), Box<dyn std::error::Error>> {
     ping_result_file_lock.lock().await.sync_all().unwrap();
     return Ok(());
 }
+fn sort_ping_results() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let file = std::fs::File::open("result/ping_ip.txt")?;
+    let reader = std::io::BufReader::new(file);
+
+    let mut ping_results: Vec<(String, u64)> = Vec::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() == 2 {
+            let ip = parts[0].to_owned();
+            let ms = parts[1].parse::<u64>().unwrap_or(0);
+            ping_results.push((ip, ms));
+        }
+    }
+
+    ping_results.sort_by(|a, b| a.1.cmp(&b.1));
+
+    let mut sorted_file = std::fs::File::create("result/sorted_ping_ip.txt")?;
+    for (ip, ms) in ping_results {
+        writeln!(sorted_file, "{} {}", ip, ms)?;
+    }
+
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -129,5 +153,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     perform_first_stage().await?;
     println!("Performing second stage");
     perform_second_stage().await?;
+    println!("Sorting results");
+    sort_ping_results()?;
+    println!("Done");
     return Ok(());
 }
