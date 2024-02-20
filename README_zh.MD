@@ -1,25 +1,14 @@
 [中文版](./README_zh.MD) | [English](./README.MD)
-# Cloudflare IPv4 地址优化器
 
-这是一个基于 Rust 的应用程序，旨在通过帮助您找出延迟最低的 IPv4 地址来优化您的 Cloudflare 体验。该程序分两个阶段进行操作，扫描 Cloudflare 的所有 IP 段，最终确定响应最快的 IP 地址。
+# 📖 介绍
+对CloudFlare的所有IP节点进行扫描，找出最快的IP节点
 
-## 概述
+# 🔨️ 开始
+```bash
+git clone https://github.com/golangboy/fast-cloudflare
+cd fast-cloudflare
+cargo run .
+```
+> 请确保你安装好了Rust环境
 
-- **阶段1：** 应用程序对 Cloudflare 提供的每个 IPv4 地址在80端口启动一个 TCP 连接。所有可达的地址都会被存储以备下一阶段使用。
-- **阶段2：** 应用程序向第一阶段中可达的每个 IP 地址发送 ping 请求。记录响应时间，并确定延迟最低的 IP 地址。
-
-每个阶段的结果都存储在应用程序创建的 `result` 目录中。第一阶段结束后，可达的 IP 地址存储在 `live_ip.txt` 中。第二阶段结束后，ping 结果存储在 `ping_ip.txt` 中。
-
-## 使用方法
-
-要运行此程序，您需要在您的机器上安装 Rust 和 Cargo。一旦这些都安装好了，您可以使用 `cargo run` 命令来运行程序。
-
-请注意，`live_ip.txt` 和 `ping_ip.txt` 文件将在 `result` 目录中创建，该目录是由程序在运行的位置自动创建的。
-
-## 贡献
-
-欢迎提供贡献！请随时提交 pull 请求。
-
-## 许可证
-
-本项目根据 MIT 许可证的条款进行许可。
+扫描结果将保存在`result\sorted_ping_ip.txt`下
