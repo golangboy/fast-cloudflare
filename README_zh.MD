@@ -7,7 +7,7 @@
 ```bash
 git clone https://github.com/golangboy/fast-cloudflare
 cd fast-cloudflare
-cargo run .
+cargo run
 ```
 > 请确保你安装好了Rust环境
 

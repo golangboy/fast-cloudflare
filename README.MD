@@ -7,7 +7,7 @@ Scan all IP nodes of CloudFlare to find the fastest IP node.
 ```bash
 git clone https://github.com/golangboy/fast-cloudflare
 cd fast-cloudflare
-cargo run .
+cargo run
 ```
 > Please ensure that you have properly installed the Rust environment.
 
