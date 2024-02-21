@@ -17,3 +17,4 @@ The scan results will be saved under`result\sorted_ping_ip.txt`
 ```bash
 docker run -t golangboyme/fast-cloudflare
 ```
+![](./images/image.jpg)
